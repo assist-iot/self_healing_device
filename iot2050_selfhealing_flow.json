@@ -1,0 +1,1020 @@
+[
+    {
+        "id": "4908adac11021477",
+        "type": "tab",
+        "label": "IOT2050 Self-healing",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "b06ab436552d975b",
+        "type": "inject",
+        "z": "4908adac11021477",
+        "name": "1 Minute",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 320,
+        "wires": [
+            [
+                "4fdd5966774ee52b",
+                "1af2e094532a9d28",
+                "35b0f1de125328fa",
+                "2ad18615b20e4731",
+                "57e3982352943348"
+            ]
+        ]
+    },
+    {
+        "id": "1af2e094532a9d28",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "echo $[100-$(vmstat 1 2|tail -1|awk '{print $15}')]",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "CPU Usage",
+        "x": 510,
+        "y": 180,
+        "wires": [
+            [
+                "1e3a79d93fd45c9f",
+                "62a36090608b3150"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "4fdd5966774ee52b",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "free | grep Mem | awk '{print $3/$2 * 100.0}'",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "RAM Usage",
+        "x": 510,
+        "y": 420,
+        "wires": [
+            [
+                "f6f2f9f97ae51f9d",
+                "4eaf9ae317f75b58"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "f6f2f9f97ae51f9d",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "> threshold %",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "ram_usage_threshold",
+                "vt": "flow"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 740,
+        "y": 420,
+        "wires": [
+            [
+                "66627f6ce0500912"
+            ]
+        ]
+    },
+    {
+        "id": "66627f6ce0500912",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "ps -eo pmem,pid | sort -rnk 1 | head -1",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 1030,
+        "y": 420,
+        "wires": [
+            [
+                "d29dd44c6c6ea787"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "d29dd44c6c6ea787",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Get PID with RAM usage > threshold %",
+        "func": "const psPmemPid = msg.payload.split(' ');\nlet pmem, pid;\n\nfor (var i = 0; i < psPmemPid.length; i++) {\n    const val = psPmemPid[i];\n    if (val === '') {\n        continue;\n    }\n    \n    if (!pmem) {\n        pmem = parseFloat(val);\n    } else if (!pid) {\n        pid = parseFloat(val);\n    }\n}\n\nif (pmem > flow.get('ram_usage_threshold')) {\n    msg.payload = pid;\n} else {\n    msg.payload = -1;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 520,
+        "wires": [
+            [
+                "a580b62b97642dd1",
+                "a688dd1778650db5"
+            ]
+        ]
+    },
+    {
+        "id": "a688dd1778650db5",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 890,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "a580b62b97642dd1",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "PID > 1",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "1",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 880,
+        "y": 540,
+        "wires": [
+            [
+                "22fcb235eea7d1c5"
+            ]
+        ]
+    },
+    {
+        "id": "22fcb235eea7d1c5",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "kill -HUP",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 1080,
+        "y": 540,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "1e3a79d93fd45c9f",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "> threshold %",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "cpu_usage_threshold",
+                "vt": "flow"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 740,
+        "y": 180,
+        "wires": [
+            [
+                "bb7f4e79081fc662"
+            ]
+        ]
+    },
+    {
+        "id": "bb7f4e79081fc662",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "ps -eo pcpu,pid | sort -rnk 1 | head -1",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 1030,
+        "y": 180,
+        "wires": [
+            [
+                "639ffaa742435667"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "639ffaa742435667",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Get PID with CPU usage > threshold %",
+        "func": "const psPcpuPid = msg.payload.split(' ');\nlet pcpu, pid;\n\nfor (var i = 0; i < psPcpuPid.length; i++) {\n    const val = psPcpuPid[i];\n    if (val === '') {\n        continue;\n    }\n    \n    if (!pcpu) {\n        pcpu = parseFloat(val);\n    } else if (!pid) {\n        pid = parseFloat(val);\n    }\n}\n\nif (pcpu > flow.get('cpu_usage_threshold')) {\n    msg.payload = pid;\n} else {\n    msg.payload = -1;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 280,
+        "wires": [
+            [
+                "1938e039dc957020",
+                "29d975035c0ddb58"
+            ]
+        ]
+    },
+    {
+        "id": "29d975035c0ddb58",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 890,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "1938e039dc957020",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "PID > 1",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "1",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 880,
+        "y": 300,
+        "wires": [
+            [
+                "c85a300d2c7d0335"
+            ]
+        ]
+    },
+    {
+        "id": "c85a300d2c7d0335",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "kill -HUP",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 1080,
+        "y": 300,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "ba5b06a79803d621",
+        "type": "ping",
+        "z": "4908adac11021477",
+        "protocol": "Automatic",
+        "mode": "timed",
+        "name": "",
+        "host": "8.8.8.8",
+        "timer": "30",
+        "inputs": 0,
+        "x": 490,
+        "y": 760,
+        "wires": [
+            [
+                "94b1fefcc6d42563"
+            ]
+        ]
+    },
+    {
+        "id": "3cdf180c5943c59e",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 870,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "576e62394ae78bc7",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 890,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "76614c89ac7abb37",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 890,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "71b74deac6a84034",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "sudo service network-manager restart",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 950,
+        "y": 800,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "94b1fefcc6d42563",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "PING fails",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "false"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 660,
+        "y": 760,
+        "wires": [
+            [
+                "71b74deac6a84034",
+                "3cdf180c5943c59e"
+            ]
+        ]
+    },
+    {
+        "id": "9d1d5393e4487d26",
+        "type": "http in",
+        "z": "4908adac11021477",
+        "name": "",
+        "url": "/cpuusage",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 400,
+        "y": 1060,
+        "wires": [
+            [
+                "dc85d39fc92c8ef4",
+                "1e06bf3456516bb0"
+            ]
+        ]
+    },
+    {
+        "id": "0b9112d068f37eb4",
+        "type": "http response",
+        "z": "4908adac11021477",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 730,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "dc85d39fc92c8ef4",
+        "type": "template",
+        "z": "4908adac11021477",
+        "name": "",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": "<html>\n    <head></head>\n    <body>\n        <h1>New CPU Usage threshold ({{req.query.threshold}}) saved correctly!</h1>\n    </body>\n</html>",
+        "output": "str",
+        "x": 580,
+        "y": 1040,
+        "wires": [
+            [
+                "0b9112d068f37eb4"
+            ]
+        ]
+    },
+    {
+        "id": "1e06bf3456516bb0",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Save CPU Usage threshold",
+        "func": "flow.set('cpu_usage_threshold', parseInt(msg.req.query.threshold));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 1080,
+        "wires": [
+            [
+                "748cbde54d682905"
+            ]
+        ]
+    },
+    {
+        "id": "748cbde54d682905",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "req.query.threshold",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "35b0f1de125328fa",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Set defaults (threshold)",
+        "func": "flow.set('cpu_usage_threshold', flow.get('cpu_usage_threshold') || 80);\nflow.set('ram_usage_threshold', flow.get('ram_usage_threshold') || 80);\nflow.set('disk_usage_threshold', flow.get('disk_usage_threshold') || 80);\nflow.set('battery_threshold', flow.get('battery_threshold') || 20);\n\nmsg.payload = {\n    cpu_usage_threshold: flow.get('cpu_usage_threshold'),\n    ram_usage_threshold: flow.get('ram_usage_threshold'),\n    disk_usage_threshold: flow.get('disk_usage_threshold'),\n    battery_threshold: flow.get('battery_threshold')\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 40,
+        "wires": [
+            [
+                "d5a48c72d1f4d9e0"
+            ]
+        ]
+    },
+    {
+        "id": "d5a48c72d1f4d9e0",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 890,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "cc712c97528e3f71",
+        "type": "http in",
+        "z": "4908adac11021477",
+        "name": "",
+        "url": "/ramusage",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 400,
+        "y": 1160,
+        "wires": [
+            [
+                "f6f26107a6583d5d",
+                "5c24ed213691bce0"
+            ]
+        ]
+    },
+    {
+        "id": "e863ef7e7037278c",
+        "type": "http response",
+        "z": "4908adac11021477",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 730,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "f6f26107a6583d5d",
+        "type": "template",
+        "z": "4908adac11021477",
+        "name": "",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": "<html>\n    <head></head>\n    <body>\n        <h1>New RAM Usage threshold ({{req.query.threshold}}) saved correctly!</h1>\n    </body>\n</html>",
+        "output": "str",
+        "x": 580,
+        "y": 1140,
+        "wires": [
+            [
+                "e863ef7e7037278c"
+            ]
+        ]
+    },
+    {
+        "id": "5c24ed213691bce0",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Save RAM Usage threshold",
+        "func": "flow.set('ram_usage_threshold', parseInt(msg.req.query.threshold));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 1180,
+        "wires": [
+            [
+                "0cafe351a232c90e"
+            ]
+        ]
+    },
+    {
+        "id": "0cafe351a232c90e",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "req.query.threshold",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "2ad18615b20e4731",
+        "type": "battery",
+        "z": "4908adac11021477",
+        "name": "",
+        "level": true,
+        "charging": true,
+        "x": 500,
+        "y": 700,
+        "wires": [
+            [
+                "a7632fceda1aa6b7"
+            ]
+        ]
+    },
+    {
+        "id": "33e8cb9be1049a92",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 870,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "a7632fceda1aa6b7",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "< threshold %",
+        "property": "payload.percent",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "lt",
+                "v": "battery_threshold",
+                "vt": "flow"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 680,
+        "y": 700,
+        "wires": [
+            [
+                "33e8cb9be1049a92"
+            ]
+        ]
+    },
+    {
+        "id": "4fae9bfd9b980592",
+        "type": "http in",
+        "z": "4908adac11021477",
+        "name": "",
+        "url": "/diskusage",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 400,
+        "y": 1260,
+        "wires": [
+            [
+                "edf6bac537f4d734",
+                "4837c5708a0e7733"
+            ]
+        ]
+    },
+    {
+        "id": "2a656e3f95d6fafa",
+        "type": "http response",
+        "z": "4908adac11021477",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 730,
+        "y": 1240,
+        "wires": []
+    },
+    {
+        "id": "edf6bac537f4d734",
+        "type": "template",
+        "z": "4908adac11021477",
+        "name": "",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": "<html>\n    <head></head>\n    <body>\n        <h1>New Disk Usage threshold ({{req.query.threshold}}) saved correctly!</h1>\n    </body>\n</html>",
+        "output": "str",
+        "x": 580,
+        "y": 1240,
+        "wires": [
+            [
+                "2a656e3f95d6fafa"
+            ]
+        ]
+    },
+    {
+        "id": "4837c5708a0e7733",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Save Disk Usage threshold",
+        "func": "flow.set('disk_usage_threshold', parseInt(msg.req.query.threshold));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 1280,
+        "wires": [
+            [
+                "f90631bcdd76b970"
+            ]
+        ]
+    },
+    {
+        "id": "f90631bcdd76b970",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "req.query.threshold",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 1280,
+        "wires": []
+    },
+    {
+        "id": "57e3982352943348",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "df | awk '/ \\/$/{print $5}' | sed 's/%//g'",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "DISK Usage",
+        "x": 510,
+        "y": 620,
+        "wires": [
+            [
+                "6baf0ad34c506950",
+                "0777958ee6dc84b9"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "6baf0ad34c506950",
+        "type": "switch",
+        "z": "4908adac11021477",
+        "name": "> threshold %",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "disk_usage_threshold",
+                "vt": "flow"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 740,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "18bb24d0c6d06516",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 890,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "68145b805267cca0",
+        "type": "http in",
+        "z": "4908adac11021477",
+        "name": "",
+        "url": "/batteryusage",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 410,
+        "y": 1360,
+        "wires": [
+            [
+                "169514a2591732d3",
+                "a1232cac71b6ca58"
+            ]
+        ]
+    },
+    {
+        "id": "1183dfb8116ab359",
+        "type": "http response",
+        "z": "4908adac11021477",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 730,
+        "y": 1340,
+        "wires": []
+    },
+    {
+        "id": "169514a2591732d3",
+        "type": "template",
+        "z": "4908adac11021477",
+        "name": "",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": "<html>\n    <head></head>\n    <body>\n        <h1>New Battery threshold ({{req.query.threshold}}) saved correctly!</h1>\n    </body>\n</html>",
+        "output": "str",
+        "x": 580,
+        "y": 1340,
+        "wires": [
+            [
+                "1183dfb8116ab359"
+            ]
+        ]
+    },
+    {
+        "id": "a1232cac71b6ca58",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "Save Battery threshold",
+        "func": "flow.set('battery_threshold', parseInt(msg.req.query.threshold));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 1380,
+        "wires": [
+            [
+                "4e67b9a282e5ed56"
+            ]
+        ]
+    },
+    {
+        "id": "4e67b9a282e5ed56",
+        "type": "debug",
+        "z": "4908adac11021477",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "req.query.threshold",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 1380,
+        "wires": []
+    },
+    {
+        "id": "62a36090608b3150",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "",
+        "func": "msg.payload = \"CPU Usage: \" + msg.payload + \"%\";\nmsg.trainData = [msg.payload];\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 140,
+        "wires": [
+            [
+                "76614c89ac7abb37"
+            ]
+        ]
+    },
+    {
+        "id": "4eaf9ae317f75b58",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "",
+        "func": "msg.payload = \"RAM Usage: \" + msg.payload + \"%\";\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 380,
+        "wires": [
+            [
+                "576e62394ae78bc7"
+            ]
+        ]
+    },
+    {
+        "id": "0777958ee6dc84b9",
+        "type": "function",
+        "z": "4908adac11021477",
+        "name": "",
+        "func": "msg.payload = \"DISK Usage: \" + msg.payload + \"%\";\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 580,
+        "wires": [
+            [
+                "18bb24d0c6d06516"
+            ]
+        ]
+    },
+    {
+        "id": "a0a6d1f20978a8c7",
+        "type": "exec",
+        "z": "4908adac11021477",
+        "command": "apt-get autoclean; apt-get autoremove; apt-get clean; find /tmp -type f -delete; rm -rf ~/.local/share/Trash/*",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": " Clean Packages, /tmp folder and Trush",
+        "x": 1030,
+        "y": 620,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    }
+]

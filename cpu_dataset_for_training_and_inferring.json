@@ -1,0 +1,258 @@
+[
+    {
+        "id": "36ea1f4a36bc2cac",
+        "type": "tab",
+        "label": "CPU_dataset_for_training_and_inferring",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "e9d3a8f6bfc15d55",
+        "type": "exec",
+        "z": "36ea1f4a36bc2cac",
+        "command": "echo $[100-$(vmstat 1 2|tail -1|awk '{print $15}')]",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "CPU Usage",
+        "x": 490,
+        "y": 240,
+        "wires": [
+            [
+                "c4dcebb7022e230c",
+                "e65ef39ce3465713"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "92c34ad580d8142e",
+        "type": "inject",
+        "z": "36ea1f4a36bc2cac",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payloadType": "date",
+        "x": 250,
+        "y": 380,
+        "wires": [
+            [
+                "e9d3a8f6bfc15d55",
+                "09de611c9cf9e9e4"
+            ]
+        ]
+    },
+    {
+        "id": "c4dcebb7022e230c",
+        "type": "function",
+        "z": "36ea1f4a36bc2cac",
+        "name": "Run prediction",
+        "func": "const network = flow.get('cpu_rnn', null);\nif (network) {\n    msg.netJSON = network;\n}\nmsg.runData = [parseInt(msg.payload)];\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 280,
+        "wires": [
+            [
+                "81734c26f27bbca4"
+            ]
+        ]
+    },
+    {
+        "id": "260173ad8ca840dd",
+        "type": "neuralnet",
+        "z": "36ea1f4a36bc2cac",
+        "name": "RNN",
+        "learningRate": 0.3,
+        "errorThresh": 0.005,
+        "iterations": 20000,
+        "log": true,
+        "logPeriod": 10,
+        "nntype": "1",
+        "x": 930,
+        "y": 280,
+        "wires": [
+            [
+                "fbc4c34b65f73234"
+            ]
+        ]
+    },
+    {
+        "id": "fbc4c34b65f73234",
+        "type": "function",
+        "z": "36ea1f4a36bc2cac",
+        "name": "",
+        "func": "msg.payload = msg.decision;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1100,
+        "y": 280,
+        "wires": [
+            [
+                "94d7557923668b89"
+            ]
+        ]
+    },
+    {
+        "id": "94d7557923668b89",
+        "type": "debug",
+        "z": "36ea1f4a36bc2cac",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1290,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "e65ef39ce3465713",
+        "type": "file",
+        "z": "36ea1f4a36bc2cac",
+        "name": "Store CPU Usage in log file",
+        "filename": "cpu_usage.log",
+        "appendNewline": false,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "utf8",
+        "x": 740,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "09de611c9cf9e9e4",
+        "type": "file in",
+        "z": "36ea1f4a36bc2cac",
+        "name": "Read CPU Usage from log file",
+        "filename": "cpu_usage.log",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "utf8",
+        "allProps": false,
+        "x": 550,
+        "y": 540,
+        "wires": [
+            [
+                "84e0f95d3db97399"
+            ]
+        ]
+    },
+    {
+        "id": "cfb0d0f800b7f4c3",
+        "type": "debug",
+        "z": "36ea1f4a36bc2cac",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1110,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "84e0f95d3db97399",
+        "type": "function",
+        "z": "36ea1f4a36bc2cac",
+        "name": "Train from CPU Usage dataset",
+        "func": "// read dataset from cpu_usage.log\nconst dataset = msg.payload.replace(/\\n/g, \",\").split(\",\")\n    .map(function(item) {\n        return item.length > 0 ? parseFloat(item) : 0.0;\n    });\n\nconst network = flow.get('cpu_rnn', null);\nif (network) {\n    msg.netJSON = network;\n}\nmsg.trainData = dataset;\nmsg.payload = {\n    dataset,\n    network\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 540,
+        "wires": [
+            [
+                "cfb0d0f800b7f4c3",
+                "6c00f5227b457b05"
+            ]
+        ]
+    },
+    {
+        "id": "6c00f5227b457b05",
+        "type": "neuralnet",
+        "z": "36ea1f4a36bc2cac",
+        "name": "RNN",
+        "learningRate": 0.3,
+        "errorThresh": 0.005,
+        "iterations": 20000,
+        "log": true,
+        "logPeriod": 10,
+        "nntype": "1",
+        "x": 1090,
+        "y": 560,
+        "wires": [
+            [
+                "5ded0c6b7f7de3a3"
+            ]
+        ]
+    },
+    {
+        "id": "5ded0c6b7f7de3a3",
+        "type": "function",
+        "z": "36ea1f4a36bc2cac",
+        "name": "",
+        "func": "if (msg.net) {\n    flow.set('cpu_rnn', msg.net);\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1260,
+        "y": 560,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "81734c26f27bbca4",
+        "type": "debug",
+        "z": "36ea1f4a36bc2cac",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "netJSON",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 970,
+        "y": 380,
+        "wires": []
+    }
+]
